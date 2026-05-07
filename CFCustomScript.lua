@@ -1,164 +1,103 @@
--- [[ CAGE-STYLE ULTIMATE: DEBUG & SYNC EDITION ]]
+-- [[ CAGE-STYLE: UNLOCKER & TP EDITION ]]
 
--- Cleanup old menu versions
-if game:GetService("CoreGui"):FindFirstChild("CageStyleExtension") then
-    game:GetService("CoreGui"):FindFirstChild("CageStyleExtension"):Destroy()
-end
-
-local ScreenGui = Instance.new("ScreenGui")
-local MainFrame = Instance.new("Frame")
-local Sidebar = Instance.new("Frame")
-local ContentFrame = Instance.new("Frame")
-local SettingsFrame = Instance.new("Frame")
-local UserInputService = game:GetService("UserInputService")
 local LP = game:GetService("Players").LocalPlayer
+local UIS = game:GetService("UserInputService")
 
--- Configuration & Globals
-_G.TargetFish = {"Abyssal", "Giant Trevally", "Whale", "Apex", "Serpent", "Leviathan"} 
-_G.AutoLock = false
+-- Configuration
+_G.TargetFish = {"Abyssal", "Serpent", "Leviathan", "Secret"} 
+_G.AutoUnlock = false -- New Toggle
 _G.AutoSubmit = false
 _G.AutoBait = false
-_G.AutoClaim = false
 _G.CustomBaitPos = Vector3.new(-938.8, 1.7, 814.0)
 
--- Container Setup
-ScreenGui.Parent = game:GetService("CoreGui")
-ScreenGui.Name = "CageStyleExtension"
-ScreenGui.ResetOnSpawn = false
-
-MainFrame.Name = "MainFrame"
-MainFrame.Parent = ScreenGui
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-MainFrame.Position = UDim2.new(0.5, -160, 0.5, -150)
-MainFrame.Size = UDim2.new(0, 320, 0, 320)
-MainFrame.Active = true
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
-
--- Sidebar Navigation
-Sidebar.Name = "Sidebar"
-Sidebar.Parent = MainFrame
-Sidebar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-Sidebar.Size = UDim2.new(0, 100, 1, 0)
-Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 10)
-
-local function CreateNav(name, pos, frame)
-    local btn = Instance.new("TextButton")
-    btn.Parent = Sidebar
-    btn.Size = UDim2.new(1, 0, 0, 40)
-    btn.Position = UDim2.new(0, 0, 0, pos)
-    btn.BackgroundTransparency = 1
-    btn.Text = name
-    btn.TextColor3 = Color3.fromRGB(200, 200, 200)
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = 12
-    btn.MouseButton1Click:Connect(function()
-        ContentFrame.Visible = (frame == ContentFrame)
-        SettingsFrame.Visible = (frame == SettingsFrame)
-    end)
+-- Clean up old UI
+if game:GetService("CoreGui"):FindFirstChild("CageStyleFinal") then
+    game:GetService("CoreGui"):FindFirstChild("CageStyleFinal"):Destroy()
 end
 
--- Panels
-ContentFrame.Parent = MainFrame
-ContentFrame.Position = UDim2.new(0, 110, 0, 10)
-ContentFrame.Size = UDim2.new(0, 200, 1, -20)
-ContentFrame.BackgroundTransparency = 1
+-- UI Creation
+local ScreenGui = Instance.new("ScreenGui", game:GetService("CoreGui"))
+ScreenGui.Name = "CageStyleFinal"
 
-SettingsFrame.Parent = MainFrame
-SettingsFrame.Position = UDim2.new(0, 110, 0, 10)
-SettingsFrame.Size = UDim2.new(0, 200, 1, -20)
-SettingsFrame.BackgroundTransparency = 1
-SettingsFrame.Visible = false
+local Main = Instance.new("Frame", ScreenGui)
+Main.Size = UDim2.new(0, 300, 0, 350)
+Main.Position = UDim2.new(0.5, -150, 0.5, -175)
+Main.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+Instance.new("UICorner", Main)
 
-CreateNav("MAIN", 10, ContentFrame)
-CreateNav("SETTINGS", 50, SettingsFrame)
+local Scrolling = Instance.new("ScrollingFrame", Main)
+Scrolling.Size = UDim2.new(1, -20, 1, -20)
+Scrolling.Position = UDim2.new(0, 10, 0, 10)
+Scrolling.BackgroundTransparency = 1
+Scrolling.CanvasSize = UDim2.new(0, 0, 1.5, 0)
+local List = Instance.new("UIListLayout", Scrolling)
+List.Padding = UDim.new(0, 5)
 
-local list1 = Instance.new("UIListLayout", ContentFrame)
-list1.Padding = UDim.new(0, 8)
+-- Button Helper
+local function CreateBtn(txt, callback)
+    local b = Instance.new("TextButton", Scrolling)
+    b.Size = UDim2.new(1, 0, 0, 35)
+    b.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    b.Text = txt
+    b.TextColor3 = Color3.new(1, 1, 1)
+    b.Font = Enum.Font.GothamSemibold
+    b.TextSize = 14
+    Instance.new("UICorner", b)
+    b.MouseButton1Click:Connect(callback)
+    return b
+end
 
--- Settings: Fish Input
-local FishInput = Instance.new("TextBox")
-FishInput.Parent = SettingsFrame
-FishInput.Size = UDim2.new(1, 0, 0, 80)
-FishInput.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-FishInput.Text = table.concat(_G.TargetFish, ", ")
-FishInput.PlaceholderText = "Enter Fish Names (Comma separated)"
-FishInput.TextColor3 = Color3.fromRGB(255, 255, 255)
-FishInput.TextWrapped = true
-FishInput.Font = Enum.Font.Gotham
-Instance.new("UICorner", FishInput)
+-- UI Buttons
+local unlockBtn = CreateBtn("Auto Unlock: OFF", function()
+    _G.AutoUnlock = not _G.AutoUnlock
+    script.Parent.Text = "Auto Unlock: " .. (_G.AutoUnlock and "ON" or "OFF")
+end)
+unlockBtn.Name = "UnlockToggle"
 
-FishInput.FocusLost:Connect(function()
-    local list = {}
-    for s in string.gmatch(FishInput.Text, "([^,]+)") do
-        table.insert(list, s:match("^%s*(.-)%s*$"))
+CreateBtn("Auto Submit", function() _G.AutoSubmit = not _G.AutoSubmit end)
+
+CreateBtn("Set Bait Loc", function(b)
+    if LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
+        _G.CustomBaitPos = LP.Character.HumanoidRootPart.Position
+        b.Text = "LOCATION SET!"
+        task.wait(1)
+        b.Text = "Set Bait Loc"
     end
-    _G.TargetFish = list
 end)
 
--- UI Toggle Setup
-local function CreateToggle(name, globalVar, parent, callback)
-    local btn = Instance.new("TextButton")
-    btn.Parent = parent
-    btn.Size = UDim2.new(1, 0, 0, 35)
-    btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-    btn.Text = name
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Font = Enum.Font.Gotham
-    btn.TextSize = 11
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-
-    btn.MouseButton1Click:Connect(function()
-        if globalVar ~= "Unused" then
-            _G[globalVar] = not _G[globalVar]
-            btn.BackgroundColor3 = _G[globalVar] and Color3.fromRGB(60, 60, 60) or Color3.fromRGB(35, 35, 35)
-        end
-        if callback then callback(btn) end
-    end)
-end
-
-CreateToggle("Auto Submit", "AutoSubmit", ContentFrame)
-CreateToggle("Auto Bait", "AutoBait", ContentFrame)
-CreateToggle("Auto Claim", "AutoClaim", ContentFrame)
-CreateToggle("Auto Lock", "AutoLock", ContentFrame)
+CreateBtn("Teleport to Bait", function()
+    if LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
+        LP.Character.HumanoidRootPart.CFrame = CFrame.new(_G.CustomBaitPos + Vector3.new(0, 3, 0))
+    end
+end)
 
 -- [[ LOGIC LOOPS ]]
 
--- Loop 1: Auto Lock (Includes Logic for Weight Strings & Locked Label)
+-- Auto Unlock Loop
 task.spawn(function()
-    while true do 
-        task.wait(2.5) -- Slightly longer wait to prevent rate-limiting
-        if _G.AutoLock then
+    while true do task.wait(2)
+        if _G.AutoUnlock then
             pcall(function()
-                -- Confirmed Path from your discovery
-                local invFrame = LP.PlayerGui.Main.Centre.Inventory.ScrollingFrame
-                
-                for _, icon in pairs(invFrame:GetChildren()) do
-                    -- Target ONLY Loot objects
+                local inv = LP.PlayerGui.Main.Centre.Inventory.ScrollingFrame
+                for _, icon in pairs(inv:GetChildren()) do
                     if icon.Name:find("Loot-") then
-                        -- Check BOTH the Attribute and the Visibility of the 'Locked' Label
-                        local attrLocked = icon:GetAttribute("Locked")
-                        local label = icon:FindFirstChild("Locked")
-                        local labelVisible = label and label.Visible or false
-                        
-                        -- If it is clearly UNLOCKED
-                        if attrLocked == false and labelVisible == false then
-                            local nameLabel = icon:FindFirstChild("ItemName")
-                            local fullText = nameLabel and nameLabel.Text or ""
+                        -- Check if it IS locked (Label is Visible)
+                        local lockLabel = icon:FindFirstChild("Locked")
+                        if lockLabel and lockLabel.Visible == true then
                             
-                            -- DEBUG: Uncomment the line below to see all names in console
-                            -- print("Checking fish: " .. fullText)
+                            local nameLabel = icon:FindFirstChild("ItemName")
+                            local fishName = nameLabel and nameLabel.Text or ""
                             
                             for _, target in pairs(_G.TargetFish) do
-                                -- Partial match to ignore "1852.12 kg" part of the string
-                                if fullText:lower():find(target:lower()) then
-                                    -- Perform Remote Lock
-                                    local args = {
-                                        [1] = "Lock",
-                                        [2] = { [1] = icon.Name } -- Sends ID like Loot-27-6684
-                                    }
-                                    game:GetService("ReplicatedStorage").Remotes.Server.Inventory:FireServer(unpack(args))
-                                    warn("[Cage-Lock] Fired Lock for: " .. fullText)
-                                    task.wait(0.2) -- Small delay between multiple locks
+                                if fishName:lower():find(target:lower()) then
+                                    -- Fire Remote to toggle OFF
+                                    game:GetService("ReplicatedStorage").Remotes.Server.Inventory:FireServer("Lock", {icon.Name})
+                                    print("[Cage-Unlock] Unlocking Secret: " .. fishName)
+                                    
+                                    -- Visual Update Hack: Toggle visibility to force refresh
+                                    icon.Visible = false
+                                    task.wait(0.05)
+                                    icon.Visible = true
                                 end
                             end
                         end
@@ -169,48 +108,24 @@ task.spawn(function()
     end
 end)
 
--- Competition & Claiming
+-- Auto Submit Loop
 task.spawn(function()
     while true do task.wait(1)
-        if _G.AutoSubmit then 
-            pcall(function() game:GetService("ReplicatedStorage").Remotes.Server.GlobalCompetition:InvokeServer("SubmitAll") end) 
-        end
-        if _G.AutoClaim then 
-            pcall(function() game:GetService("ReplicatedStorage").Remotes.Server.claimPassiveIncome:FireServer() end) 
+        if _G.AutoSubmit then
+            pcall(function() game:GetService("ReplicatedStorage").Remotes.Server.GlobalCompetition:InvokeServer("SubmitAll") end)
         end
     end
 end)
 
--- Auto Bait
-task.spawn(function()
-    while true do
-        if _G.AutoBait then
-            pcall(function()
-                game:GetService("ReplicatedStorage").Remotes.Server.Tool:InvokeServer("Activate", {
-                    ItemKey = "Bait-7", 
-                    RelativeFactor = Vector3.new(0.5, 1.7, 0.1), 
-                    ZoneIndex = 1, 
-                    Position = _G.CustomBaitPos
-                })
-            end)
-            task.wait(300)
-        else task.wait(1) end
-    end
-end)
-
--- UI Dragging & Visibility
+-- Dragging logic for UI
 local dragging, dragInput, dragStart, startPos
-MainFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true; dragStart = input.Position; startPos = MainFrame.Position end
+Main.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true; dragStart = input.Position; startPos = Main.Position end
 end)
-UserInputService.InputChanged:Connect(function(input)
+UIS.InputChanged:Connect(function(input)
     if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
         local delta = input.Position - dragStart
-        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
 end)
-MainFrame.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
-
-UserInputService.InputBegan:Connect(function(input, gp)
-    if not gp and input.KeyCode == Enum.KeyCode.RightControl then MainFrame.Visible = not MainFrame.Visible end
-end)
+Main.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
