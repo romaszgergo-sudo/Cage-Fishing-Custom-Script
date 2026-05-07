@@ -9,6 +9,7 @@ local Sidebar = Instance.new("Frame")
 local ContentFrame = Instance.new("Frame")
 local SettingsFrame = Instance.new("Frame")
 local UserInputService = game:GetService("UserInputService")
+local LP = game:GetService("Players").LocalPlayer
 
 -- Configuration & Globals
 _G.TargetFish = {"Giant Trevally", "Shark", "Whale"} 
@@ -21,7 +22,6 @@ _G.CustomBaitPos = Vector3.new(-938.8, 1.7, 814.0)
 -- Container Setup
 ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.Name = "CageStyleExtension"
-ScreenGui.ResetOnSpawn = false
 
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
@@ -78,7 +78,6 @@ FishInput.Parent = SettingsFrame
 FishInput.Size = UDim2.new(1, 0, 0, 80)
 FishInput.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 FishInput.Text = "Giant Trevally, Shark, Whale"
-FishInput.PlaceholderText = "Enter Fish Names (Comma separated)"
 FishInput.TextColor3 = Color3.fromRGB(255, 255, 255)
 FishInput.TextWrapped = true
 FishInput.Font = Enum.Font.Gotham
@@ -113,58 +112,41 @@ local function CreateToggle(name, globalVar, parent, callback)
     end)
 end
 
--- Adding All Buttons
+-- Adding Buttons
 CreateToggle("Auto Submit", "AutoSubmit", ContentFrame)
 CreateToggle("Auto Bait", "AutoBait", ContentFrame)
 CreateToggle("Auto Claim", "AutoClaim", ContentFrame)
 CreateToggle("Auto Lock", "AutoLock", ContentFrame)
 
 CreateToggle("Set Bait Loc", "Unused", ContentFrame, function(btn)
-    local lp = game.Players.LocalPlayer
-    if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
-        _G.CustomBaitPos = lp.Character.HumanoidRootPart.Position
-        local oldText = btn.Text
+    if LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
+        _G.CustomBaitPos = LP.Character.HumanoidRootPart.Position
         btn.Text = "SAVED!"
-        btn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
         task.wait(1)
-        btn.Text = oldText
-        btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+        btn.Text = "Set Bait Loc"
     end
 end)
 
 CreateToggle("TP Exhibition", "Unused", ContentFrame, function()
-    local char = game.Players.LocalPlayer.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        char.HumanoidRootPart.CFrame = CFrame.new(-1097, 13, 450)
+    if LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
+        LP.Character.HumanoidRootPart.CFrame = CFrame.new(-1097, 13, 450)
     end
 end)
 
--- [LOGIC] AUTO LOCK (Using the Debris Path)
+-- Logic Loops (Now isolated to prevent crashes)
 task.spawn(function()
-    while true do
-        task.wait(3)
-        if _G.AutoLock then
-            pcall(function()
-                local lootPath = game.Workspace.Debris.Players:FindFirstChild(game.Players.LocalPlayer.Name):FindFirstChild("Loot")
-                if lootPath then
-                    for _, item in pairs(lootPath:GetChildren()) do
-                        for _, targetName in pairs(_G.TargetFish) do
-                            if string.find(item.Name:lower(), targetName:lower()) and not item:GetAttribute("Locked") then
-                                game:GetService("ReplicatedStorage").Remotes.Server.Inventory:FireServer("Lock", { [1] = item.Name })
-                            end
-                        end
-                    end
-                end
-            end)
+    while true do task.wait(1)
+        if _G.AutoSubmit then 
+            pcall(function() game:GetService("ReplicatedStorage").Remotes.Server.GlobalCompetition:InvokeServer("SubmitAll") end) 
         end
     end
 end)
 
--- [LOGIC] OTHER AUTOMATIONS
 task.spawn(function()
-    while true do task.wait(1)
-        if _G.AutoSubmit then pcall(function() game:GetService("ReplicatedStorage").Remotes.Server.GlobalCompetition:InvokeServer("SubmitAll") end) end
-        if _G.AutoClaim then pcall(function() game:GetService("ReplicatedStorage").Remotes.Server.claimPassiveIncome:FireServer() end) end
+    while true do task.wait(5)
+        if _G.AutoClaim then 
+            pcall(function() game:GetService("ReplicatedStorage").Remotes.Server.claimPassiveIncome:FireServer() end) 
+        end
     end
 end)
 
@@ -179,11 +161,29 @@ task.spawn(function()
     end
 end)
 
--- Keybind & Dragging Logic
-UserInputService.InputBegan:Connect(function(input, gp)
-    if not gp and input.KeyCode == Enum.KeyCode.RightControl then MainFrame.Visible = not MainFrame.Visible end
+task.spawn(function()
+    while true do task.wait(3)
+        if _G.AutoLock then
+            pcall(function()
+                -- Precise path from your Explorer screenshot
+                local playersFolder = game.Workspace:FindFirstChild("Debris"):FindFirstChild("Players")
+                local myLoot = playersFolder:FindFirstChild(LP.Name):FindFirstChild("Loot")
+                
+                if myLoot then
+                    for _, item in pairs(myLoot:GetChildren()) do
+                        for _, target in pairs(_G.TargetFish) do
+                            if string.find(item.Name:lower(), target:lower()) and not item:GetAttribute("Locked") then
+                                game:GetService("ReplicatedStorage").Remotes.Server.Inventory:FireServer("Lock", {[1] = item.Name})
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
 end)
 
+-- Dragging Logic
 local dragging, dragInput, dragStart, startPos
 MainFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true; dragStart = input.Position; startPos = MainFrame.Position end
