@@ -1,6 +1,6 @@
--- [[ CAGE-STYLE ULTIMATE EXTENSION ]]
+-- [[ CAGE-STYLE ULTIMATE: FINAL VERIFIED VERSION ]]
 
--- Cleanup old versions
+-- Cleanup old menu versions
 if game:GetService("CoreGui"):FindFirstChild("CageStyleExtension") then
     game:GetService("CoreGui"):FindFirstChild("CageStyleExtension"):Destroy()
 end
@@ -14,7 +14,7 @@ local UserInputService = game:GetService("UserInputService")
 local LP = game:GetService("Players").LocalPlayer
 
 -- Configuration & Globals
-_G.TargetFish = {"Abyssal", "Giant Trevally", "Whale"} 
+_G.TargetFish = {"Abyssal", "Giant Trevally", "Whale", "Apex"} 
 _G.AutoLock = false
 _G.AutoSubmit = false
 _G.AutoBait = false
@@ -26,7 +26,6 @@ ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.Name = "CageStyleExtension"
 ScreenGui.ResetOnSpawn = false
 
--- Main Body
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
@@ -58,7 +57,7 @@ local function CreateNav(name, pos, frame)
     end)
 end
 
--- Panels
+-- Content Panels
 ContentFrame.Parent = MainFrame
 ContentFrame.Position = UDim2.new(0, 110, 0, 10)
 ContentFrame.Size = UDim2.new(0, 200, 1, -20)
@@ -76,12 +75,12 @@ CreateNav("SETTINGS", 50, SettingsFrame)
 local list1 = Instance.new("UIListLayout", ContentFrame)
 list1.Padding = UDim.new(0, 8)
 
--- Settings: Fish Input Box
+-- Settings: Fish Input
 local FishInput = Instance.new("TextBox")
 FishInput.Parent = SettingsFrame
 FishInput.Size = UDim2.new(1, 0, 0, 80)
 FishInput.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-FishInput.Text = "Abyssal, Giant Trevally, Whale"
+FishInput.Text = "Abyssal, Giant Trevally, Whale, Apex"
 FishInput.PlaceholderText = "Enter Fish Names (Comma separated)"
 FishInput.TextColor3 = Color3.fromRGB(255, 255, 255)
 FishInput.TextWrapped = true
@@ -96,7 +95,7 @@ FishInput.FocusLost:Connect(function()
     _G.TargetFish = list
 end)
 
--- UI Toggle Template
+-- Toggle Button Template
 local function CreateToggle(name, globalVar, parent, callback)
     local btn = Instance.new("TextButton")
     btn.Parent = parent
@@ -117,7 +116,7 @@ local function CreateToggle(name, globalVar, parent, callback)
     end)
 end
 
--- Build Main Tab
+-- Adding Buttons
 CreateToggle("Auto Submit", "AutoSubmit", ContentFrame)
 CreateToggle("Auto Bait", "AutoBait", ContentFrame)
 CreateToggle("Auto Claim", "AutoClaim", ContentFrame)
@@ -132,26 +131,35 @@ CreateToggle("Set Bait Loc", "Unused", ContentFrame, function(btn)
     end
 end)
 
-CreateToggle("TP Exhibition", "Unused", ContentFrame, function()
-    if LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
-        LP.Character.HumanoidRootPart.CFrame = CFrame.new(-1097, 13, 450)
-    end
-end)
-
 -- [[ LOGIC LOOPS ]]
 
--- Loop 1: Auto Lock
+-- Loop 1: Auto Lock (Confirmed Path & Attribute Logic)
 task.spawn(function()
-    while true do task.wait(3)
+    while true do task.wait(2)
         if _G.AutoLock then
             pcall(function()
-                local loot = game.Workspace.Debris.Players:FindFirstChild(LP.Name):FindFirstChild("Loot")
-                if loot then
-                    for _, item in pairs(loot:GetChildren()) do
-                        for _, target in pairs(_G.TargetFish) do
-                            if string.find(item.Name:lower(), target:lower()) and not item:GetAttribute("Locked") then
-                                game:GetService("ReplicatedStorage").Remotes.Server.Inventory:FireServer("Lock", {[1] = item.Name})
-                                print("[Cage-Lock] Locking: " .. item.Name)
+                -- Precise inventory path
+                local invFrame = LP.PlayerGui.Main.Centre.Inventory.ScrollingFrame
+                
+                for _, icon in pairs(invFrame:GetChildren()) do
+                    -- Identify Loot items
+                    if icon.Name:find("Loot-") then
+                        -- Check Attribute
+                        if icon:GetAttribute("Locked") == false then
+                            -- Find name label
+                            local nameLabel = icon:FindFirstChild("ItemName")
+                            local fishName = nameLabel and nameLabel.Text or ""
+                            
+                            for _, target in pairs(_G.TargetFish) do
+                                if fishName:lower():find(target:lower()) then
+                                    -- Remote arguments match logs
+                                    local args = {
+                                        [1] = "Lock",
+                                        [2] = { [1] = icon.Name }
+                                    }
+                                    game:GetService("ReplicatedStorage").Remotes.Server.Inventory:FireServer(unpack(args))
+                                    print("[Cage-Lock] Locking: " .. fishName .. " (" .. icon.Name .. ")")
+                                end
                             end
                         end
                     end
@@ -161,7 +169,7 @@ task.spawn(function()
     end
 end)
 
--- Loop 2: Submit & Claim
+-- Loop 2: Competition & Passive Income
 task.spawn(function()
     while true do task.wait(1)
         if _G.AutoSubmit then 
@@ -190,7 +198,7 @@ task.spawn(function()
     end
 end)
 
--- Dragging & Toggle Logic
+-- Dragging & UI Management
 local dragging, dragInput, dragStart, startPos
 MainFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true; dragStart = input.Position; startPos = MainFrame.Position end
