@@ -1,4 +1,4 @@
--- Clean up old menu if it exists
+-- Clean up old menu
 if game:GetService("CoreGui"):FindFirstChild("CageStyleExtension") then
     game:GetService("CoreGui"):FindFirstChild("CageStyleExtension"):Destroy()
 end
@@ -7,69 +7,101 @@ local ScreenGui = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
 local Sidebar = Instance.new("Frame")
 local ContentFrame = Instance.new("Frame")
-local TitleLabel = Instance.new("TextLabel")
-local UIListLayout = Instance.new("UIListLayout")
+local SettingsFrame = Instance.new("Frame")
 local UserInputService = game:GetService("UserInputService")
 
--- Container
+-- Configuration & Globals
+_G.TargetFish = {"Giant Trevally", "Shark", "Whale"} 
+_G.AutoLock = false
+_G.AutoSubmit = false
+_G.AutoBait = false
+_G.AutoClaim = false
+_G.CustomBaitPos = Vector3.new(-938.8, 1.7, 814.0)
+
+-- Container Setup
 ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.Name = "CageStyleExtension"
 ScreenGui.ResetOnSpawn = false
 
--- Main Body
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-MainFrame.BorderSizePixel = 0
-MainFrame.Position = UDim2.new(0.5, -150, 0.5, -150)
-MainFrame.Size = UDim2.new(0, 320, 0, 300)
+MainFrame.Position = UDim2.new(0.5, -160, 0.5, -150)
+MainFrame.Size = UDim2.new(0, 320, 0, 320)
 MainFrame.Active = true
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
 
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 10)
-MainCorner.Parent = MainFrame
-
--- Sidebar
+-- Sidebar Navigation
 Sidebar.Name = "Sidebar"
 Sidebar.Parent = MainFrame
 Sidebar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 Sidebar.Size = UDim2.new(0, 100, 1, 0)
-Sidebar.BorderSizePixel = 0
+Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 10)
 
-local SidebarCorner = Instance.new("UICorner")
-SidebarCorner.CornerRadius = UDim.new(0, 10)
-SidebarCorner.Parent = Sidebar
+local function CreateNav(name, pos, frame)
+    local btn = Instance.new("TextButton")
+    btn.Parent = Sidebar
+    btn.Size = UDim2.new(1, 0, 0, 40)
+    btn.Position = UDim2.new(0, 0, 0, pos)
+    btn.BackgroundTransparency = 1
+    btn.Text = name
+    btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 12
+    btn.MouseButton1Click:Connect(function()
+        ContentFrame.Visible = (frame == ContentFrame)
+        SettingsFrame.Visible = (frame == SettingsFrame)
+    end)
+end
 
-TitleLabel.Parent = Sidebar
-TitleLabel.Size = UDim2.new(1, 0, 0, 40)
-TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "CUSTOM"
-TitleLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-TitleLabel.TextSize = 14
-TitleLabel.Font = Enum.Font.GothamBold
-
--- Content Area
-ContentFrame.Name = "Content"
+-- Content Panels
 ContentFrame.Parent = MainFrame
 ContentFrame.Position = UDim2.new(0, 110, 0, 10)
 ContentFrame.Size = UDim2.new(0, 200, 1, -20)
 ContentFrame.BackgroundTransparency = 1
 
-UIListLayout.Parent = ContentFrame
-UIListLayout.Padding = UDim.new(0, 8)
-UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+SettingsFrame.Parent = MainFrame
+SettingsFrame.Position = UDim2.new(0, 110, 0, 10)
+SettingsFrame.Size = UDim2.new(0, 200, 1, -20)
+SettingsFrame.BackgroundTransparency = 1
+SettingsFrame.Visible = false
 
--- Button Template
-local function CreateToggleButton(name, globalVar, callback)
+CreateNav("MAIN", 10, ContentFrame)
+CreateNav("SETTINGS", 50, SettingsFrame)
+
+local list1 = Instance.new("UIListLayout", ContentFrame)
+list1.Padding = UDim.new(0, 8)
+
+-- Auto-Lock Input Box (In Settings)
+local FishInput = Instance.new("TextBox")
+FishInput.Parent = SettingsFrame
+FishInput.Size = UDim2.new(1, 0, 0, 80)
+FishInput.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+FishInput.Text = "Giant Trevally, Shark, Whale"
+FishInput.PlaceholderText = "Enter Fish Names (Comma separated)"
+FishInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+FishInput.TextWrapped = true
+FishInput.Font = Enum.Font.Gotham
+Instance.new("UICorner", FishInput)
+
+FishInput.FocusLost:Connect(function()
+    local list = {}
+    for s in string.gmatch(FishInput.Text, "([^,]+)") do
+        table.insert(list, s:match("^%s*(.-)%s*$"))
+    end
+    _G.TargetFish = list
+end)
+
+-- Toggle Button Template
+local function CreateToggle(name, globalVar, parent, callback)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 40)
+    btn.Parent = parent
+    btn.Size = UDim2.new(1, 0, 0, 35)
     btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
     btn.Text = name
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.Font = Enum.Font.Gotham
-    btn.TextSize = 12
-    btn.Parent = ContentFrame
-
+    btn.TextSize = 11
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
 
     btn.MouseButton1Click:Connect(function()
@@ -79,30 +111,18 @@ local function CreateToggleButton(name, globalVar, callback)
         end
         if callback then callback(btn) end
     end)
-    return btn
 end
 
--- [1] AUTO SUBMIT
-_G.AutoSubmit = false
-CreateToggleButton("Auto Submit", "AutoSubmit")
-task.spawn(function()
-    while true do task.wait(1)
-        if _G.AutoSubmit then pcall(function() game:GetService("ReplicatedStorage").Remotes.Server.GlobalCompetition:InvokeServer("SubmitAll") end) end
-    end
-end)
+-- Adding All Buttons
+CreateToggle("Auto Submit", "AutoSubmit", ContentFrame)
+CreateToggle("Auto Bait", "AutoBait", ContentFrame)
+CreateToggle("Auto Claim", "AutoClaim", ContentFrame)
+CreateToggle("Auto Lock", "AutoLock", ContentFrame)
 
--- [2] AUTO BAIT & [3] SET LOC
-_G.AutoBait = false
-_G.CustomBaitPos = Vector3.new(-938.8, 1.7, 814.0)
-
-CreateToggleButton("Auto Bait", "AutoBait")
-
-CreateToggleButton("Set Bait Loc", "Unused", function(btn)
+CreateToggle("Set Bait Loc", "Unused", ContentFrame, function(btn)
     local lp = game.Players.LocalPlayer
     if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
         _G.CustomBaitPos = lp.Character.HumanoidRootPart.Position
-        
-        -- Visual Confirmation
         local oldText = btn.Text
         btn.Text = "SAVED!"
         btn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
@@ -112,53 +132,64 @@ CreateToggleButton("Set Bait Loc", "Unused", function(btn)
     end
 end)
 
+CreateToggle("TP Exhibition", "Unused", ContentFrame, function()
+    local char = game.Players.LocalPlayer.Character
+    if char and char:FindFirstChild("HumanoidRootPart") then
+        char.HumanoidRootPart.CFrame = CFrame.new(-1097, 13, 450)
+    end
+end)
+
+-- [LOGIC] AUTO LOCK (Using the Debris Path)
+task.spawn(function()
+    while true do
+        task.wait(3)
+        if _G.AutoLock then
+            pcall(function()
+                local lootPath = game.Workspace.Debris.Players:FindFirstChild(game.Players.LocalPlayer.Name):FindFirstChild("Loot")
+                if lootPath then
+                    for _, item in pairs(lootPath:GetChildren()) do
+                        for _, targetName in pairs(_G.TargetFish) do
+                            if string.find(item.Name:lower(), targetName:lower()) and not item:GetAttribute("Locked") then
+                                game:GetService("ReplicatedStorage").Remotes.Server.Inventory:FireServer("Lock", { [1] = item.Name })
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- [LOGIC] OTHER AUTOMATIONS
+task.spawn(function()
+    while true do task.wait(1)
+        if _G.AutoSubmit then pcall(function() game:GetService("ReplicatedStorage").Remotes.Server.GlobalCompetition:InvokeServer("SubmitAll") end) end
+        if _G.AutoClaim then pcall(function() game:GetService("ReplicatedStorage").Remotes.Server.claimPassiveIncome:FireServer() end) end
+    end
+end)
+
 task.spawn(function()
     while true do
         if _G.AutoBait then
             pcall(function()
-                local args = {"Activate", {ItemKey = "Bait-7", RelativeFactor = Vector3.new(0.5, 1.7, 0.1), ZoneIndex = 1, Position = _G.CustomBaitPos}}
-                game:GetService("ReplicatedStorage").Remotes.Server.Tool:InvokeServer(unpack(args))
+                game:GetService("ReplicatedStorage").Remotes.Server.Tool:InvokeServer("Activate", {ItemKey = "Bait-7", RelativeFactor = Vector3.new(0.5, 1.7, 0.1), ZoneIndex = 1, Position = _G.CustomBaitPos})
             end)
             task.wait(300)
         else task.wait(1) end
     end
 end)
 
--- [4] AUTO CLAIM
-_G.AutoClaim = false
-CreateToggleButton("Auto Claim", "AutoClaim")
-task.spawn(function()
-    while true do task.wait(5)
-        if _G.AutoClaim then pcall(function() game:GetService("ReplicatedStorage").Remotes.Server.claimPassiveIncome:FireServer() end) end
-    end
+-- Keybind & Dragging Logic
+UserInputService.InputBegan:Connect(function(input, gp)
+    if not gp and input.KeyCode == Enum.KeyCode.RightControl then MainFrame.Visible = not MainFrame.Visible end
 end)
 
--- [5] TELEPORT TO EXHIBITION (Manual Coords)
-CreateToggleButton("TP Exhibition", "Unused", function()
-    local char = game.Players.LocalPlayer.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        -- Using your specific coordinates
-        char.HumanoidRootPart.CFrame = CFrame.new(-1097, 13, 450)
-    end
-end)
-
--- HIDE / SHOW KEYBIND (Right Control)
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if not gameProcessed and input.KeyCode == Enum.KeyCode.RightControl then
-        MainFrame.Visible = not MainFrame.Visible
-    end
-end)
-
--- Dragging Logic
 local dragging, dragInput, dragStart, startPos
 MainFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true; dragStart = input.Position; startPos = MainFrame.Position
-    end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true; dragStart = input.Position; startPos = MainFrame.Position end
 end)
-MainFrame.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end end)
 UserInputService.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
         local delta = input.Position - dragStart
         MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
