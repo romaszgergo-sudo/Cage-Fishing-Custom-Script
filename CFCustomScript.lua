@@ -1,4 +1,4 @@
--- [[ CAGE-STYLE ULTIMATE: VISIBILITY-SYNC EDITION ]]
+-- [[ CAGE-STYLE ULTIMATE: ATTRIBUTE & VISIBILITY SYNC ]]
 
 -- Cleanup old menu versions
 if game:GetService("CoreGui"):FindFirstChild("CageStyleExtension") then
@@ -14,7 +14,7 @@ local UserInputService = game:GetService("UserInputService")
 local LP = game:GetService("Players").LocalPlayer
 
 -- Configuration & Globals
-_G.TargetFish = {"Abyssal", "Giant Trevally", "Whale", "Apex"} 
+_G.TargetFish = {"Abyssal", "Giant Trevally", "Whale", "Apex", "Serpent"} 
 _G.AutoLock = false
 _G.AutoSubmit = false
 _G.AutoBait = false
@@ -57,7 +57,7 @@ local function CreateNav(name, pos, frame)
     end)
 end
 
--- Content Panels
+-- Panels
 ContentFrame.Parent = MainFrame
 ContentFrame.Position = UDim2.new(0, 110, 0, 10)
 ContentFrame.Size = UDim2.new(0, 200, 1, -20)
@@ -80,7 +80,7 @@ local FishInput = Instance.new("TextBox")
 FishInput.Parent = SettingsFrame
 FishInput.Size = UDim2.new(1, 0, 0, 80)
 FishInput.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-FishInput.Text = "Abyssal, Giant Trevally, Whale, Apex"
+FishInput.Text = "Abyssal, Giant Trevally, Whale, Apex, Serpent"
 FishInput.PlaceholderText = "Enter Fish Names (Comma separated)"
 FishInput.TextColor3 = Color3.fromRGB(255, 255, 255)
 FishInput.TextWrapped = true
@@ -95,7 +95,7 @@ FishInput.FocusLost:Connect(function()
     _G.TargetFish = list
 end)
 
--- Toggle Button Template
+-- UI Toggle Setup
 local function CreateToggle(name, globalVar, parent, callback)
     local btn = Instance.new("TextButton")
     btn.Parent = parent
@@ -116,7 +116,6 @@ local function CreateToggle(name, globalVar, parent, callback)
     end)
 end
 
--- Adding Buttons
 CreateToggle("Auto Submit", "AutoSubmit", ContentFrame)
 CreateToggle("Auto Bait", "AutoBait", ContentFrame)
 CreateToggle("Auto Claim", "AutoClaim", ContentFrame)
@@ -133,35 +132,37 @@ end)
 
 -- [[ LOGIC LOOPS ]]
 
--- Loop 1: Auto Lock (Corrected for "Locked" Label Visibility)
+-- Loop 1: Auto Lock (Handles Partial Matches & Attribute/Visibility Checks)
 task.spawn(function()
     while true do task.wait(2)
         if _G.AutoLock then
             pcall(function()
-                -- Path confirmed: ScrollingFrame contains the loot
+                -- Confirmed Path
                 local invFrame = LP.PlayerGui.Main.Centre.Inventory.ScrollingFrame
                 
                 for _, icon in pairs(invFrame:GetChildren()) do
-                    -- Identify Loot icons (TextButtons)
+                    -- Identify Loot TextButtons
                     if icon.Name:find("Loot-") then
-                        -- Check the visibility of the "Locked" TextLabel
-                        local lockedLabel = icon:FindFirstChild("Locked")
+                        -- Check Attribute AND Visible Label
+                        local attrLocked = icon:GetAttribute("Locked")
+                        local label = icon:FindFirstChild("Locked")
+                        local labelVisible = label and label.Visible or false
                         
-                        -- If the label is NOT visible, the fish is not locked
-                        if lockedLabel and lockedLabel.Visible == false then
-                            -- Identify fish by the ItemName label
+                        -- If it's NOT locked by either measure, try to lock it
+                        if not attrLocked and not labelVisible then
+                            -- Target name label (contains Weight text)
                             local nameLabel = icon:FindFirstChild("ItemName")
-                            local fishName = nameLabel and nameLabel.Text or ""
+                            local fullText = nameLabel and nameLabel.Text or ""
                             
                             for _, target in pairs(_G.TargetFish) do
-                                if fishName:lower():find(target:lower()) then
-                                    -- Perform the remote call using the icon's Name ID
+                                -- Partial match to ignore the Weight/KG
+                                if fullText:lower():find(target:lower()) then
                                     local args = {
                                         [1] = "Lock",
                                         [2] = { [1] = icon.Name }
                                     }
                                     game:GetService("ReplicatedStorage").Remotes.Server.Inventory:FireServer(unpack(args))
-                                    print("[Cage-Lock] Fired Remote for: " .. fishName)
+                                    print("[Cage-Lock] Locking: " .. fullText)
                                 end
                             end
                         end
@@ -172,7 +173,7 @@ task.spawn(function()
     end
 end)
 
--- Loop 2: Competition & Passive Income
+-- Loop 2: Competition & Claim
 task.spawn(function()
     while true do task.wait(1)
         if _G.AutoSubmit then 
@@ -184,7 +185,7 @@ task.spawn(function()
     end
 end)
 
--- Loop 3: Auto Bait (Standardized gravity for throw trajectory)
+-- Loop 3: Auto Bait
 task.spawn(function()
     while true do
         if _G.AutoBait then
@@ -201,7 +202,7 @@ task.spawn(function()
     end
 end)
 
--- Dragging & UI Management
+-- Dragging Logic
 local dragging, dragInput, dragStart, startPos
 MainFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true; dragStart = input.Position; startPos = MainFrame.Position end
