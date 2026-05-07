@@ -10,6 +10,15 @@ local ContentFrame = Instance.new("Frame")
 local TitleLabel = Instance.new("TextLabel")
 local UIListLayout = Instance.new("UIListLayout")
 local UserInputService = game:GetService("UserInputService")
+local LP = game.Players.LocalPlayer
+
+-- Configuration & Target List
+_G.TargetFish = {"Secret", "Abyssal", "Serpent", "Leviathan"}
+_G.AutoUnlock = false
+_G.AutoSubmit = false
+_G.AutoBait = false
+_G.AutoClaim = false
+_G.CustomBaitPos = Vector3.new(-938.8, 1.7, 814.0)
 
 -- Container
 ScreenGui.Parent = game:GetService("CoreGui")
@@ -22,7 +31,7 @@ MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 MainFrame.BorderSizePixel = 0
 MainFrame.Position = UDim2.new(0.5, -150, 0.5, -150)
-MainFrame.Size = UDim2.new(0, 320, 0, 300)
+MainFrame.Size = UDim2.new(0, 320, 0, 320) -- Slightly taller for more buttons
 MainFrame.Active = true
 
 local MainCorner = Instance.new("UICorner")
@@ -62,7 +71,7 @@ UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 -- Button Template
 local function CreateToggleButton(name, globalVar, callback)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 40)
+    btn.Size = UDim2.new(1, 0, 0, 35)
     btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
     btn.Text = name
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -83,7 +92,6 @@ local function CreateToggleButton(name, globalVar, callback)
 end
 
 -- [1] AUTO SUBMIT
-_G.AutoSubmit = false
 CreateToggleButton("Auto Submit", "AutoSubmit")
 task.spawn(function()
     while true do task.wait(1)
@@ -92,17 +100,11 @@ task.spawn(function()
 end)
 
 -- [2] AUTO BAIT & [3] SET LOC
-_G.AutoBait = false
-_G.CustomBaitPos = Vector3.new(-938.8, 1.7, 814.0)
-
 CreateToggleButton("Auto Bait", "AutoBait")
 
 CreateToggleButton("Set Bait Loc", "Unused", function(btn)
-    local lp = game.Players.LocalPlayer
-    if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
-        _G.CustomBaitPos = lp.Character.HumanoidRootPart.Position
-        
-        -- Visual Confirmation
+    if LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
+        _G.CustomBaitPos = LP.Character.HumanoidRootPart.Position
         local oldText = btn.Text
         btn.Text = "SAVED!"
         btn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
@@ -125,7 +127,6 @@ task.spawn(function()
 end)
 
 -- [4] AUTO CLAIM
-_G.AutoClaim = false
 CreateToggleButton("Auto Claim", "AutoClaim")
 task.spawn(function()
     while true do task.wait(5)
@@ -133,12 +134,44 @@ task.spawn(function()
     end
 end)
 
--- [5] TELEPORT TO EXHIBITION (Manual Coords)
+-- [5] AUTO UNLOCK (The New Logic)
+CreateToggleButton("Auto Unlock", "AutoUnlock")
+task.spawn(function()
+    while true do task.wait(1.5)
+        if _G.AutoUnlock then
+            pcall(function()
+                local inv = LP.PlayerGui.Main.Centre.Inventory.ScrollingFrame
+                for _, icon in pairs(inv:GetChildren()) do
+                    if icon.Name:find("Loot-") then
+                        -- Check if the "Locked" label is currently visible
+                        local lockLabel = icon:FindFirstChild("Locked")
+                        if lockLabel and lockLabel.Visible == true then
+                            local nameLabel = icon:FindFirstChild("ItemName")
+                            local fullName = nameLabel and nameLabel.Text or ""
+                            
+                            for _, target in pairs(_G.TargetFish) do
+                                if fullName:lower():find(target:lower()) then
+                                    -- Fire Unlock Remote
+                                    game:GetService("ReplicatedStorage").Remotes.Server.Inventory:FireServer("Lock", {icon.Name})
+                                    
+                                    -- Force UI Refresh (Nudge the icon)
+                                    lockLabel.Visible = false
+                                    icon.LayoutOrder = icon.LayoutOrder + 1
+                                    icon.LayoutOrder = icon.LayoutOrder - 1
+                                end
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- [6] TELEPORT TO EXHIBITION
 CreateToggleButton("TP Exhibition", "Unused", function()
-    local char = game.Players.LocalPlayer.Character
-    if char and char:FindFirstChild("HumanoidRootPart") then
-        -- Using your specific coordinates
-        char.HumanoidRootPart.CFrame = CFrame.new(-1097, 13, 450)
+    if LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
+        LP.Character.HumanoidRootPart.CFrame = CFrame.new(-1097, 13, 450)
     end
 end)
 
