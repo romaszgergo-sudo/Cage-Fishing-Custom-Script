@@ -1,4 +1,4 @@
--- [[ CAGE-STYLE ULTIMATE: ATTRIBUTE & VISIBILITY SYNC ]]
+-- [[ CAGE-STYLE ULTIMATE: DEBUG & SYNC EDITION ]]
 
 -- Cleanup old menu versions
 if game:GetService("CoreGui"):FindFirstChild("CageStyleExtension") then
@@ -14,7 +14,7 @@ local UserInputService = game:GetService("UserInputService")
 local LP = game:GetService("Players").LocalPlayer
 
 -- Configuration & Globals
-_G.TargetFish = {"Abyssal", "Giant Trevally", "Whale", "Apex", "Serpent"} 
+_G.TargetFish = {"Abyssal", "Giant Trevally", "Whale", "Apex", "Serpent", "Leviathan"} 
 _G.AutoLock = false
 _G.AutoSubmit = false
 _G.AutoBait = false
@@ -80,7 +80,7 @@ local FishInput = Instance.new("TextBox")
 FishInput.Parent = SettingsFrame
 FishInput.Size = UDim2.new(1, 0, 0, 80)
 FishInput.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-FishInput.Text = "Abyssal, Giant Trevally, Whale, Apex, Serpent"
+FishInput.Text = table.concat(_G.TargetFish, ", ")
 FishInput.PlaceholderText = "Enter Fish Names (Comma separated)"
 FishInput.TextColor3 = Color3.fromRGB(255, 255, 255)
 FishInput.TextWrapped = true
@@ -121,48 +121,44 @@ CreateToggle("Auto Bait", "AutoBait", ContentFrame)
 CreateToggle("Auto Claim", "AutoClaim", ContentFrame)
 CreateToggle("Auto Lock", "AutoLock", ContentFrame)
 
-CreateToggle("Set Bait Loc", "Unused", ContentFrame, function(btn)
-    if LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
-        _G.CustomBaitPos = LP.Character.HumanoidRootPart.Position
-        btn.Text = "SAVED!"
-        task.wait(1)
-        btn.Text = "Set Bait Loc"
-    end
-end)
-
 -- [[ LOGIC LOOPS ]]
 
--- Loop 1: Auto Lock (Handles Partial Matches & Attribute/Visibility Checks)
+-- Loop 1: Auto Lock (Includes Logic for Weight Strings & Locked Label)
 task.spawn(function()
-    while true do task.wait(2)
+    while true do 
+        task.wait(2.5) -- Slightly longer wait to prevent rate-limiting
         if _G.AutoLock then
             pcall(function()
-                -- Confirmed Path
+                -- Confirmed Path from your discovery
                 local invFrame = LP.PlayerGui.Main.Centre.Inventory.ScrollingFrame
                 
                 for _, icon in pairs(invFrame:GetChildren()) do
-                    -- Identify Loot TextButtons
+                    -- Target ONLY Loot objects
                     if icon.Name:find("Loot-") then
-                        -- Check Attribute AND Visible Label
+                        -- Check BOTH the Attribute and the Visibility of the 'Locked' Label
                         local attrLocked = icon:GetAttribute("Locked")
                         local label = icon:FindFirstChild("Locked")
                         local labelVisible = label and label.Visible or false
                         
-                        -- If it's NOT locked by either measure, try to lock it
-                        if not attrLocked and not labelVisible then
-                            -- Target name label (contains Weight text)
+                        -- If it is clearly UNLOCKED
+                        if attrLocked == false and labelVisible == false then
                             local nameLabel = icon:FindFirstChild("ItemName")
                             local fullText = nameLabel and nameLabel.Text or ""
                             
+                            -- DEBUG: Uncomment the line below to see all names in console
+                            -- print("Checking fish: " .. fullText)
+                            
                             for _, target in pairs(_G.TargetFish) do
-                                -- Partial match to ignore the Weight/KG
+                                -- Partial match to ignore "1852.12 kg" part of the string
                                 if fullText:lower():find(target:lower()) then
+                                    -- Perform Remote Lock
                                     local args = {
                                         [1] = "Lock",
-                                        [2] = { [1] = icon.Name }
+                                        [2] = { [1] = icon.Name } -- Sends ID like Loot-27-6684
                                     }
                                     game:GetService("ReplicatedStorage").Remotes.Server.Inventory:FireServer(unpack(args))
-                                    print("[Cage-Lock] Locking: " .. fullText)
+                                    warn("[Cage-Lock] Fired Lock for: " .. fullText)
+                                    task.wait(0.2) -- Small delay between multiple locks
                                 end
                             end
                         end
@@ -173,7 +169,7 @@ task.spawn(function()
     end
 end)
 
--- Loop 2: Competition & Claim
+-- Competition & Claiming
 task.spawn(function()
     while true do task.wait(1)
         if _G.AutoSubmit then 
@@ -185,7 +181,7 @@ task.spawn(function()
     end
 end)
 
--- Loop 3: Auto Bait
+-- Auto Bait
 task.spawn(function()
     while true do
         if _G.AutoBait then
@@ -202,7 +198,7 @@ task.spawn(function()
     end
 end)
 
--- Dragging Logic
+-- UI Dragging & Visibility
 local dragging, dragInput, dragStart, startPos
 MainFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true; dragStart = input.Position; startPos = MainFrame.Position end
