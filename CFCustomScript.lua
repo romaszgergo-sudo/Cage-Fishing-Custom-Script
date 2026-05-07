@@ -1,4 +1,4 @@
--- [[ CAGE-STYLE ULTIMATE: FINAL VERIFIED VERSION ]]
+-- [[ CAGE-STYLE ULTIMATE: VISIBILITY-SYNC EDITION ]]
 
 -- Cleanup old menu versions
 if game:GetService("CoreGui"):FindFirstChild("CageStyleExtension") then
@@ -133,32 +133,35 @@ end)
 
 -- [[ LOGIC LOOPS ]]
 
--- Loop 1: Auto Lock (Confirmed Path & Attribute Logic)
+-- Loop 1: Auto Lock (Corrected for "Locked" Label Visibility)
 task.spawn(function()
     while true do task.wait(2)
         if _G.AutoLock then
             pcall(function()
-                -- Precise inventory path
+                -- Path confirmed: ScrollingFrame contains the loot
                 local invFrame = LP.PlayerGui.Main.Centre.Inventory.ScrollingFrame
                 
                 for _, icon in pairs(invFrame:GetChildren()) do
-                    -- Identify Loot items
+                    -- Identify Loot icons (TextButtons)
                     if icon.Name:find("Loot-") then
-                        -- Check Attribute
-                        if icon:GetAttribute("Locked") == false then
-                            -- Find name label
+                        -- Check the visibility of the "Locked" TextLabel
+                        local lockedLabel = icon:FindFirstChild("Locked")
+                        
+                        -- If the label is NOT visible, the fish is not locked
+                        if lockedLabel and lockedLabel.Visible == false then
+                            -- Identify fish by the ItemName label
                             local nameLabel = icon:FindFirstChild("ItemName")
                             local fishName = nameLabel and nameLabel.Text or ""
                             
                             for _, target in pairs(_G.TargetFish) do
                                 if fishName:lower():find(target:lower()) then
-                                    -- Remote arguments match logs
+                                    -- Perform the remote call using the icon's Name ID
                                     local args = {
                                         [1] = "Lock",
                                         [2] = { [1] = icon.Name }
                                     }
                                     game:GetService("ReplicatedStorage").Remotes.Server.Inventory:FireServer(unpack(args))
-                                    print("[Cage-Lock] Locking: " .. fishName .. " (" .. icon.Name .. ")")
+                                    print("[Cage-Lock] Fired Remote for: " .. fishName)
                                 end
                             end
                         end
@@ -181,7 +184,7 @@ task.spawn(function()
     end
 end)
 
--- Loop 3: Auto Bait
+-- Loop 3: Auto Bait (Standardized gravity for throw trajectory)
 task.spawn(function()
     while true do
         if _G.AutoBait then
