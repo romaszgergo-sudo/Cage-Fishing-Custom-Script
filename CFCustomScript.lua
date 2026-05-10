@@ -1,9 +1,9 @@
--- [[ CAGE-STYLE: FULL FARM V5 + AUTO-SAVE CONFIG ]]
+-- [[ CAGE-STYLE: FULL FARM V5.1 + OPTIMIZED SELL ]]
 
 local HttpService = game:GetService("HttpService")
 local ConfigFile = "CageStyleConfig.json"
 
--- Clean up old menu if it exists
+-- Clean up old menu
 if game:GetService("CoreGui"):FindFirstChild("CageStyleExtension") then
     game:GetService("CoreGui"):FindFirstChild("CageStyleExtension"):Destroy()
 end
@@ -40,11 +40,11 @@ local function SaveConfig()
         AutoBuyCage = _G.AutoBuyCage,
         TargetCages = _G.TargetCages
     }
-    writefile(ConfigFile, HttpService:JSONEncode(data))
+    if writefile then writefile(ConfigFile, HttpService:JSONEncode(data)) end
 end
 
 local function LoadConfig()
-    if isfile(ConfigFile) then
+    if isfile and isfile(ConfigFile) then
         local data = HttpService:JSONDecode(readfile(ConfigFile))
         _G.AutoRod = data.AutoRod
         _G.AutoRodSell = data.AutoRodSell
@@ -69,12 +69,11 @@ local CageList = {
     "Pirate Cage", "Atlantean Cage", "Arcade Cage"
 }
 
--- UI Container
+-- UI Setup
 ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.Name = "CageStyleExtension"
 ScreenGui.ResetOnSpawn = false
 
--- Main Body
 MainFrame.Name = "MainFrame"
 MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
@@ -84,7 +83,6 @@ MainFrame.Size = UDim2.new(0, 420, 0, 420)
 MainFrame.Active = true
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
 
--- Sidebar
 Sidebar.Name = "Sidebar"
 Sidebar.Parent = MainFrame
 Sidebar.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
@@ -95,12 +93,11 @@ Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 12)
 TitleLabel.Parent = Sidebar
 TitleLabel.Size = UDim2.new(1, 0, 0, 50)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "CONFIG V5"
+TitleLabel.Text = "STABLE V5.1"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleLabel.TextSize = 16
 TitleLabel.Font = Enum.Font.GothamBold
 
--- Content Area
 ContentFrame.Name = "Content"
 ContentFrame.Parent = MainFrame
 ContentFrame.Position = UDim2.new(0, 130, 0, 15)
@@ -114,7 +111,6 @@ UIListLayout.Parent = ContentFrame
 UIListLayout.Padding = UDim.new(0, 10)
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
--- Button Template
 local function CreateToggleButton(name, globalVar, callback)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, -5, 0, 38)
@@ -124,25 +120,22 @@ local function CreateToggleButton(name, globalVar, callback)
     btn.Font = Enum.Font.GothamMedium
     btn.TextSize = 11
     btn.Parent = ContentFrame
-
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
 
     btn.MouseButton1Click:Connect(function()
         if globalVar ~= "Unused" then
             _G[globalVar] = not _G[globalVar]
             btn.BackgroundColor3 = _G[globalVar] and Color3.fromRGB(0, 120, 255) or Color3.fromRGB(35, 35, 35)
-            SaveConfig() -- Auto-save on click
+            SaveConfig()
         end
         if callback then callback(btn) end
     end)
     return btn
 end
 
--- [1] ROD FARMING
+-- Buttons
 CreateToggleButton("Auto Fishing Rod", "AutoRod")
 CreateToggleButton("Auto Sell (Rod Fish)", "AutoRodSell")
-
--- [2] CAGE SNIPER
 CreateToggleButton("Auto Buy Selected Cages", "AutoBuyCage")
 
 local DropBtn = CreateToggleButton("Filter Cages (" .. #_G.TargetCages .. " Selected)", "Unused")
@@ -150,7 +143,6 @@ local DropFrame = Instance.new("ScrollingFrame", ContentFrame)
 DropFrame.Size = UDim2.new(1, -5, 0, 0)
 DropFrame.Visible = false
 DropFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-DropFrame.BorderSizePixel = 0
 DropFrame.ScrollBarThickness = 2
 DropFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
 Instance.new("UIListLayout", DropFrame).Padding = UDim.new(0, 2)
@@ -160,14 +152,10 @@ for _, cageName in pairs(CageList) do
     local cBtn = Instance.new("TextButton", DropFrame)
     cBtn.Size = UDim2.new(1, 0, 0, 30)
     cBtn.Text = cageName
-    
-    -- Load color from config
     cBtn.BackgroundColor3 = table.find(_G.TargetCages, cageName) and Color3.fromRGB(0, 150, 255) or Color3.fromRGB(40, 40, 40)
-    
     cBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
     cBtn.Font = Enum.Font.Gotham
     cBtn.TextSize = 11
-    
     cBtn.MouseButton1Click:Connect(function()
         if table.find(_G.TargetCages, cageName) then
             for i, v in pairs(_G.TargetCages) do if v == cageName then table.remove(_G.TargetCages, i) end end
@@ -177,7 +165,7 @@ for _, cageName in pairs(CageList) do
             cBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
         end
         DropBtn.Text = "Filter Cages (" .. #_G.TargetCages .. " Selected)"
-        SaveConfig() -- Auto-save on selection
+        SaveConfig()
     end)
 end
 
@@ -186,7 +174,6 @@ DropBtn.MouseButton1Click:Connect(function()
     DropFrame.Size = DropFrame.Visible and UDim2.new(1, -5, 0, 160) or UDim2.new(1, -5, 0, 0)
 end)
 
--- [3] BAIT & UTILS
 CreateToggleButton("Auto Buy Bait (Worms)", "AutoBuyBait")
 CreateToggleButton("Auto Use Bait", "AutoBait")
 CreateToggleButton("Set Bait Loc", "Unused", function(btn)
@@ -198,29 +185,42 @@ CreateToggleButton("Set Bait Loc", "Unused", function(btn)
     end
 end)
 CreateToggleButton("Auto Claim Income", "AutoClaim")
-CreateToggleButton("Auto Sell (Cage Loot)", "AutoSell")
+CreateToggleButton("Auto Sell (All Items)", "AutoSell")
 
 CreateToggleButton("TP Exhibition", "Unused", function()
-    if LP.Character and LP.Character.PrimaryPart then
-        LP.Character:SetPrimaryPartCFrame(CFrame.new(-1097, 13, 450))
-    end
+    if LP.Character and LP.Character.PrimaryPart then LP.Character:SetPrimaryPartCFrame(CFrame.new(-1097, 13, 450)) end
 end)
 
 -- ==========================================
 -- ||             LOOPS                    ||
 -- ==========================================
 
--- Auto Rod
+-- Optimized Sell Loop (FPS Fix)
 task.spawn(function()
-    while true do task.wait(1.5)
-        if _G.AutoRod then pcall(function() game:GetService("ReplicatedStorage").Remotes.Server.FishFishingRod:InvokeServer() end) end
-    end
-end)
+    while true do 
+        task.wait(5) -- Slower interval to prevent lag
+        if _G.AutoSell then
+            pcall(function()
+                local invFrame = LP.PlayerGui.Main.Centre.Inventory.ScrollingFrame
+                local itemsToSell = {}
+                
+                -- Only scan every other frame to keep FPS stable
+                for i, icon in pairs(invFrame:GetChildren()) do
+                    if i % 10 == 0 then task.wait() end -- Tiny break to let engine breathe
+                    
+                    if icon.Name:find("Loot-") or icon.Name:find("Fish-") then
+                        local isLocked = icon:GetAttribute("Locked") or (icon:FindFirstChild("Locked") and icon.Locked.Visible)
+                        if not isLocked then
+                            table.insert(itemsToSell, icon.Name)
+                        end
+                    end
+                end
 
--- Auto Rod Sell
-task.spawn(function()
-    while true do task.wait(3)
-        if _G.AutoRodSell then pcall(function() game:GetService("ReplicatedStorage").Remotes.Server.FisherMan:FireServer("SellFish") end) end
+                if #itemsToSell > 0 then
+                    game:GetService("ReplicatedStorage").Remotes.Server.FishShop:FireServer("SellAll", {itemsToSell})
+                end
+            end)
+        end
     end
 end)
 
@@ -240,9 +240,16 @@ task.spawn(function()
     end
 end)
 
--- Bait & Other Loops
+-- Rod Loops
 task.spawn(function()
-    while true do task.wait(5)
+    while true do task.wait(1.5)
+        if _G.AutoRod then game:GetService("ReplicatedStorage").Remotes.Server.FishFishingRod:InvokeServer() end
+    end
+end)
+
+task.spawn(function()
+    while true do task.wait(3)
+        if _G.AutoRodSell then game:GetService("ReplicatedStorage").Remotes.Server.FisherMan:FireServer("SellFish") end
         if _G.AutoBuyBait then game:GetService("ReplicatedStorage").Remotes.Server.Bait:FireServer("Buy", 7) end
         if _G.AutoClaim then game:GetService("ReplicatedStorage").Remotes.Server.claimPassiveIncome:FireServer() end
     end
@@ -257,25 +264,6 @@ task.spawn(function()
             end)
             task.wait(300)
         else task.wait(1) end
-    end
-end)
-
--- Inventory Sell Loop
-task.spawn(function()
-    while true do task.wait(3)
-        if _G.AutoSell then
-            pcall(function()
-                local inv = LP.PlayerGui.Main.Centre.Inventory.ScrollingFrame
-                local items = {}
-                for _, icon in pairs(inv:GetChildren()) do
-                    if icon.Name:find("Loot-") then
-                        local lock = icon:GetAttribute("Locked") or (icon:FindFirstChild("Locked") and icon.Locked.Visible)
-                        if not lock then table.insert(items, icon.Name) end
-                    end
-                end
-                if #items > 0 then game:GetService("ReplicatedStorage").Remotes.Server.FishShop:FireServer("SellAll", {items}) end
-            end)
-        end
     end
 end)
 
