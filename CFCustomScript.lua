@@ -1,3 +1,5 @@
+-- [[ CAGE-STYLE: CLEAN BASE + AUTO SELL ]]
+
 -- Clean up old menu if it exists
 if game:GetService("CoreGui"):FindFirstChild("CageStyleExtension") then
     game:GetService("CoreGui"):FindFirstChild("CageStyleExtension"):Destroy()
@@ -10,6 +12,7 @@ local ContentFrame = Instance.new("Frame")
 local TitleLabel = Instance.new("TextLabel")
 local UIListLayout = Instance.new("UIListLayout")
 local UserInputService = game:GetService("UserInputService")
+local LP = game.Players.LocalPlayer
 
 -- Container
 ScreenGui.Parent = game:GetService("CoreGui")
@@ -22,7 +25,7 @@ MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 MainFrame.BorderSizePixel = 0
 MainFrame.Position = UDim2.new(0.5, -150, 0.5, -150)
-MainFrame.Size = UDim2.new(0, 320, 0, 300)
+MainFrame.Size = UDim2.new(0, 320, 0, 320) -- Slightly taller for the new button
 MainFrame.Active = true
 
 local MainCorner = Instance.new("UICorner")
@@ -62,7 +65,7 @@ UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 -- Button Template
 local function CreateToggleButton(name, globalVar, callback)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 40)
+    btn.Size = UDim2.new(1, 0, 0, 35) -- Adjusted size to fit more buttons nicely
     btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
     btn.Text = name
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -98,9 +101,8 @@ _G.CustomBaitPos = Vector3.new(-938.8, 1.7, 814.0)
 CreateToggleButton("Auto Bait", "AutoBait")
 
 CreateToggleButton("Set Bait Loc", "Unused", function(btn)
-    local lp = game.Players.LocalPlayer
-    if lp.Character and lp.Character:FindFirstChild("HumanoidRootPart") then
-        _G.CustomBaitPos = lp.Character.HumanoidRootPart.Position
+    if LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
+        _G.CustomBaitPos = LP.Character.HumanoidRootPart.Position
         
         -- Visual Confirmation
         local oldText = btn.Text
@@ -133,11 +135,42 @@ task.spawn(function()
     end
 end)
 
--- [5] TELEPORT TO EXHIBITION (Manual Coords)
+-- [5] AUTO SELL (Dynamic Inventory Scanner)
+_G.AutoSell = false
+CreateToggleButton("Auto Sell", "AutoSell")
+task.spawn(function()
+    while true do task.wait(3) -- Scans every 3 seconds
+        if _G.AutoSell then
+            pcall(function()
+                local inv = LP.PlayerGui.Main.Centre.Inventory.ScrollingFrame
+                local itemsToSell = {}
+                
+                -- Dynamically grab all current items in your inventory
+                for _, icon in pairs(inv:GetChildren()) do
+                    if icon.Name:find("Loot-") then
+                        -- Safety check: DO NOT sell if it is locked
+                        local isLockedAttr = icon:GetAttribute("Locked")
+                        local lockLabel = icon:FindFirstChild("Locked")
+                        
+                        if not (isLockedAttr == true or (lockLabel and lockLabel.Visible == true)) then
+                            table.insert(itemsToSell, icon.Name)
+                        end
+                    end
+                end
+                
+                -- Only fire the remote if we actually have items to sell
+                if #itemsToSell > 0 then
+                    game:GetService("ReplicatedStorage").Remotes.Server.FishShop:FireServer("SellAll", {itemsToSell})
+                end
+            end)
+        end
+    end
+end)
+
+-- [6] TELEPORT TO EXHIBITION (Manual Coords)
 CreateToggleButton("TP Exhibition", "Unused", function()
-    local char = game.Players.LocalPlayer.Character
+    local char = LP.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
-        -- Using your specific coordinates
         char.HumanoidRootPart.CFrame = CFrame.new(-1097, 13, 450)
     end
 end)
