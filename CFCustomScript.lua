@@ -1,4 +1,7 @@
--- [[ CAGE-STYLE: FULL FARM V5 ]]
+-- [[ CAGE-STYLE: FULL FARM V5 + AUTO-SAVE CONFIG ]]
+
+local HttpService = game:GetService("HttpService")
+local ConfigFile = "CageStyleConfig.json"
 
 -- Clean up old menu if it exists
 if game:GetService("CoreGui"):FindFirstChild("CageStyleExtension") then
@@ -14,7 +17,7 @@ local UIListLayout = Instance.new("UIListLayout")
 local UserInputService = game:GetService("UserInputService")
 local LP = game.Players.LocalPlayer
 
--- Configs
+-- Base Configs
 _G.AutoRod = false
 _G.AutoRodSell = false
 _G.AutoBait = false
@@ -24,6 +27,37 @@ _G.AutoSell = false
 _G.AutoBuyCage = false
 _G.TargetCages = {} 
 _G.CustomBaitPos = Vector3.new(-938.8, 1.7, 814.0)
+
+-- Save/Load Functions
+local function SaveConfig()
+    local data = {
+        AutoRod = _G.AutoRod,
+        AutoRodSell = _G.AutoRodSell,
+        AutoBait = _G.AutoBait,
+        AutoBuyBait = _G.AutoBuyBait,
+        AutoClaim = _G.AutoClaim,
+        AutoSell = _G.AutoSell,
+        AutoBuyCage = _G.AutoBuyCage,
+        TargetCages = _G.TargetCages
+    }
+    writefile(ConfigFile, HttpService:JSONEncode(data))
+end
+
+local function LoadConfig()
+    if isfile(ConfigFile) then
+        local data = HttpService:JSONDecode(readfile(ConfigFile))
+        _G.AutoRod = data.AutoRod
+        _G.AutoRodSell = data.AutoRodSell
+        _G.AutoBait = data.AutoBait
+        _G.AutoBuyBait = data.AutoBuyBait
+        _G.AutoClaim = data.AutoClaim
+        _G.AutoSell = data.AutoSell
+        _G.AutoBuyCage = data.AutoBuyCage
+        _G.TargetCages = data.TargetCages or {}
+    end
+end
+
+LoadConfig()
 
 local CageList = {
     "Wooden Cage", "Rusty Cage", "Plastic Cage", "Iron Cage", "Shark Cage", 
@@ -35,7 +69,7 @@ local CageList = {
     "Pirate Cage", "Atlantean Cage", "Arcade Cage"
 }
 
--- Container
+-- UI Container
 ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.Name = "CageStyleExtension"
 ScreenGui.ResetOnSpawn = false
@@ -61,7 +95,7 @@ Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 12)
 TitleLabel.Parent = Sidebar
 TitleLabel.Size = UDim2.new(1, 0, 0, 50)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "CUSTOM V5"
+TitleLabel.Text = "CONFIG V5"
 TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 TitleLabel.TextSize = 16
 TitleLabel.Font = Enum.Font.GothamBold
@@ -84,7 +118,7 @@ UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 local function CreateToggleButton(name, globalVar, callback)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, -5, 0, 38)
-    btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    btn.BackgroundColor3 = (_G[globalVar] == true) and Color3.fromRGB(0, 120, 255) or Color3.fromRGB(35, 35, 35)
     btn.Text = name
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.Font = Enum.Font.GothamMedium
@@ -97,6 +131,7 @@ local function CreateToggleButton(name, globalVar, callback)
         if globalVar ~= "Unused" then
             _G[globalVar] = not _G[globalVar]
             btn.BackgroundColor3 = _G[globalVar] and Color3.fromRGB(0, 120, 255) or Color3.fromRGB(35, 35, 35)
+            SaveConfig() -- Auto-save on click
         end
         if callback then callback(btn) end
     end)
@@ -125,7 +160,10 @@ for _, cageName in pairs(CageList) do
     local cBtn = Instance.new("TextButton", DropFrame)
     cBtn.Size = UDim2.new(1, 0, 0, 30)
     cBtn.Text = cageName
-    cBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    
+    -- Load color from config
+    cBtn.BackgroundColor3 = table.find(_G.TargetCages, cageName) and Color3.fromRGB(0, 150, 255) or Color3.fromRGB(40, 40, 40)
+    
     cBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
     cBtn.Font = Enum.Font.Gotham
     cBtn.TextSize = 11
@@ -139,6 +177,7 @@ for _, cageName in pairs(CageList) do
             cBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255)
         end
         DropBtn.Text = "Filter Cages (" .. #_G.TargetCages .. " Selected)"
+        SaveConfig() -- Auto-save on selection
     end)
 end
 
