@@ -1,6 +1,6 @@
--- [[ CAGE-STYLE: CLEAN BASE + AUTO SELL ]]
+-- [[ CAGE-STYLE: CONVEYOR SCANNER UPDATE ]]
 
--- Clean up old menu if it exists
+-- Clean up old menu
 if game:GetService("CoreGui"):FindFirstChild("CageStyleExtension") then
     game:GetService("CoreGui"):FindFirstChild("CageStyleExtension"):Destroy()
 end
@@ -8,11 +8,22 @@ end
 local ScreenGui = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
 local Sidebar = Instance.new("Frame")
-local ContentFrame = Instance.new("Frame")
+local ContentFrame = Instance.new("ScrollingFrame")
 local TitleLabel = Instance.new("TextLabel")
 local UIListLayout = Instance.new("UIListLayout")
 local UserInputService = game:GetService("UserInputService")
 local LP = game.Players.LocalPlayer
+
+-- Global Toggles & Configs
+_G.AutoBait = false
+_G.CustomBaitPos = Vector3.new(-938.8, 1.7, 814.0)
+_G.AutoClaim = false
+_G.AutoSell = false
+_G.AutoRod = false
+_G.AutoRodSell = false
+_G.AutoBuyBait = false
+_G.AutoBuyCage = false
+_G.TargetCageName = "Iron Cage" -- Change this to the exact name shown over the cage
 
 -- Container
 ScreenGui.Parent = game:GetService("CoreGui")
@@ -25,12 +36,9 @@ MainFrame.Parent = ScreenGui
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 MainFrame.BorderSizePixel = 0
 MainFrame.Position = UDim2.new(0.5, -150, 0.5, -150)
-MainFrame.Size = UDim2.new(0, 320, 0, 320) -- Slightly taller for the new button
+MainFrame.Size = UDim2.new(0, 320, 0, 320)
 MainFrame.Active = true
-
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 10)
-MainCorner.Parent = MainFrame
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
 
 -- Sidebar
 Sidebar.Name = "Sidebar"
@@ -38,15 +46,12 @@ Sidebar.Parent = MainFrame
 Sidebar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 Sidebar.Size = UDim2.new(0, 100, 1, 0)
 Sidebar.BorderSizePixel = 0
-
-local SidebarCorner = Instance.new("UICorner")
-SidebarCorner.CornerRadius = UDim.new(0, 10)
-SidebarCorner.Parent = Sidebar
+Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 10)
 
 TitleLabel.Parent = Sidebar
 TitleLabel.Size = UDim2.new(1, 0, 0, 40)
 TitleLabel.BackgroundTransparency = 1
-TitleLabel.Text = "CUSTOM"
+TitleLabel.Text = "CAGE v3"
 TitleLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 TitleLabel.TextSize = 14
 TitleLabel.Font = Enum.Font.GothamBold
@@ -57,6 +62,9 @@ ContentFrame.Parent = MainFrame
 ContentFrame.Position = UDim2.new(0, 110, 0, 10)
 ContentFrame.Size = UDim2.new(0, 200, 1, -20)
 ContentFrame.BackgroundTransparency = 1
+ContentFrame.BorderSizePixel = 0
+ContentFrame.ScrollBarThickness = 4
+ContentFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
 UIListLayout.Parent = ContentFrame
 UIListLayout.Padding = UDim.new(0, 8)
@@ -65,14 +73,13 @@ UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 -- Button Template
 local function CreateToggleButton(name, globalVar, callback)
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 35) -- Adjusted size to fit more buttons nicely
+    btn.Size = UDim2.new(1, -10, 0, 35)
     btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
     btn.Text = name
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.Font = Enum.Font.Gotham
     btn.TextSize = 12
     btn.Parent = ContentFrame
-
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
 
     btn.MouseButton1Click:Connect(function()
@@ -85,32 +92,18 @@ local function CreateToggleButton(name, globalVar, callback)
     return btn
 end
 
--- [1] AUTO SUBMIT
-_G.AutoSubmit = false
-CreateToggleButton("Auto Submit", "AutoSubmit")
-task.spawn(function()
-    while true do task.wait(1)
-        if _G.AutoSubmit then pcall(function() game:GetService("ReplicatedStorage").Remotes.Server.GlobalCompetition:InvokeServer("SubmitAll") end) end
-    end
-end)
+-- ==========================================
+-- ||             FEATURES                 ||
+-- ==========================================
 
--- [2] AUTO BAIT & [3] SET LOC
-_G.AutoBait = false
-_G.CustomBaitPos = Vector3.new(-938.8, 1.7, 814.0)
-
-CreateToggleButton("Auto Bait", "AutoBait")
-
+-- [1] AUTO BAIT
+CreateToggleButton("Auto Bait (Cage)", "AutoBait")
 CreateToggleButton("Set Bait Loc", "Unused", function(btn)
     if LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
         _G.CustomBaitPos = LP.Character.HumanoidRootPart.Position
-        
-        -- Visual Confirmation
-        local oldText = btn.Text
         btn.Text = "SAVED!"
-        btn.BackgroundColor3 = Color3.fromRGB(50, 150, 50)
         task.wait(1)
-        btn.Text = oldText
-        btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+        btn.Text = "Set Bait Loc"
     end
 end)
 
@@ -118,16 +111,14 @@ task.spawn(function()
     while true do
         if _G.AutoBait then
             pcall(function()
-                local args = {"Activate", {ItemKey = "Bait-7", RelativeFactor = Vector3.new(0.5, 1.7, 0.1), ZoneIndex = 1, Position = _G.CustomBaitPos}}
-                game:GetService("ReplicatedStorage").Remotes.Server.Tool:InvokeServer(unpack(args))
+                game:GetService("ReplicatedStorage").Remotes.Server.Tool:InvokeServer("Activate", {ItemKey = "Bait-7", RelativeFactor = Vector3.new(0.5, 1.7, 0.1), ZoneIndex = 1, Position = _G.CustomBaitPos})
             end)
             task.wait(300)
         else task.wait(1) end
     end
 end)
 
--- [4] AUTO CLAIM
-_G.AutoClaim = false
+-- [2] AUTO CLAIM
 CreateToggleButton("Auto Claim", "AutoClaim")
 task.spawn(function()
     while true do task.wait(5)
@@ -135,30 +126,23 @@ task.spawn(function()
     end
 end)
 
--- [5] AUTO SELL (Dynamic Inventory Scanner)
-_G.AutoSell = false
-CreateToggleButton("Auto Sell", "AutoSell")
+-- [3] AUTO SELL CAGES (Dynamic Inventory)
+CreateToggleButton("Auto Sell (Cages)", "AutoSell")
 task.spawn(function()
-    while true do task.wait(3) -- Scans every 3 seconds
+    while true do task.wait(3)
         if _G.AutoSell then
             pcall(function()
                 local inv = LP.PlayerGui.Main.Centre.Inventory.ScrollingFrame
                 local itemsToSell = {}
-                
-                -- Dynamically grab all current items in your inventory
                 for _, icon in pairs(inv:GetChildren()) do
                     if icon.Name:find("Loot-") then
-                        -- Safety check: DO NOT sell if it is locked
-                        local isLockedAttr = icon:GetAttribute("Locked")
-                        local lockLabel = icon:FindFirstChild("Locked")
-                        
-                        if not (isLockedAttr == true or (lockLabel and lockLabel.Visible == true)) then
+                        -- Based on your image: checking the 'Locked' attribute/child
+                        local locked = icon:GetAttribute("Locked") or (icon:FindFirstChild("Locked") and icon.Locked.Visible)
+                        if not locked then
                             table.insert(itemsToSell, icon.Name)
                         end
                     end
                 end
-                
-                -- Only fire the remote if we actually have items to sell
                 if #itemsToSell > 0 then
                     game:GetService("ReplicatedStorage").Remotes.Server.FishShop:FireServer("SellAll", {itemsToSell})
                 end
@@ -167,7 +151,55 @@ task.spawn(function()
     end
 end)
 
--- [6] TELEPORT TO EXHIBITION (Manual Coords)
+-- [4] AUTO FISHING ROD
+CreateToggleButton("Auto Fish (Rod)", "AutoRod")
+task.spawn(function()
+    while true do task.wait(1.5)
+        if _G.AutoRod then pcall(function() game:GetService("ReplicatedStorage").Remotes.Server.FishFishingRod:InvokeServer() end) end
+    end
+end)
+
+-- [5] AUTO SELL ROD FISH
+CreateToggleButton("Auto Sell (Rod)", "AutoRodSell")
+task.spawn(function()
+    while true do task.wait(3)
+        if _G.AutoRodSell then pcall(function() game:GetService("ReplicatedStorage").Remotes.Server.FisherMan:FireServer("SellFish") end) end
+    end
+end)
+
+-- [6] AUTO BUY BAIT
+CreateToggleButton("Auto Buy Bait", "AutoBuyBait")
+task.spawn(function()
+    while true do task.wait(5)
+        if _G.AutoBuyBait then pcall(function() game:GetService("ReplicatedStorage").Remotes.Server.Bait:FireServer("Buy", 7) end) end
+    end
+end)
+
+-- [7] AUTO BUY CAGE (WORKSPACE SCANNER)
+CreateToggleButton("Auto Buy Cage", "AutoBuyCage")
+task.spawn(function()
+    while true do task.wait(1) -- Fast scan for new cages
+        if _G.AutoBuyCage then 
+            pcall(function() 
+                local conveyorModels = workspace:WaitForChild("Conveyor"):WaitForChild("Models")
+                for _, cage in pairs(conveyorModels:GetChildren()) do
+                    -- Drilling down based on your screenshots: Cage -> Information -> CageTag -> Cage (TextLabel)
+                    local info = cage:FindFirstChild("Information")
+                    local tag = info and info:FindFirstChild("CageTag")
+                    local nameLabel = tag and tag:FindFirstChild("Cage")
+                    
+                    if nameLabel and nameLabel.Text == _G.TargetCageName then
+                        -- Buy the cage using its unique ID (the name of the model)
+                        game:GetService("ReplicatedStorage").Remotes.Server.Conveyor:InvokeServer("Buy", {cage.Name})
+                        task.wait(0.5) -- Small delay to prevent spamming the same cage
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- [8] TELEPORT TO EXHIBITION
 CreateToggleButton("TP Exhibition", "Unused", function()
     local char = LP.Character
     if char and char:FindFirstChild("HumanoidRootPart") then
@@ -175,14 +207,13 @@ CreateToggleButton("TP Exhibition", "Unused", function()
     end
 end)
 
--- HIDE / SHOW KEYBIND (Right Control)
+-- UI LOGIC (Keybind & Dragging)
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if not gameProcessed and input.KeyCode == Enum.KeyCode.RightControl then
         MainFrame.Visible = not MainFrame.Visible
     end
 end)
 
--- Dragging Logic
 local dragging, dragInput, dragStart, startPos
 MainFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
