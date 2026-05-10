@@ -1,24 +1,21 @@
--- [[ CAGE-STYLE: ENHANCED PRO UI v5 ]]
+-- [[ CAGE-STYLE: CLEAN & FUNCTIONAL v6 ]]
 
 local LP = game.Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 
--- Global Configs
+-- Configs
 _G.Toggles = {
-    AutoCollect = false,
-    AutoSell = false,
     AutoRod = false,
     AutoRodSell = false,
     AutoBuyBait = false,
-    AutoBuyCage = false,
-    KeepEventFish = false
+    AutoBuyCage = false
 }
 _G.TargetCages = {} 
 _G.SelectedBait = "Jar O' Worms"
 _G.CustomBaitPos = Vector3.new(-938.8, 1.7, 814.0)
 
--- UI Cleanup
+-- Clean old UI
 if game:GetService("CoreGui"):FindFirstChild("CageFishingUI") then
     game:GetService("CoreGui"):FindFirstChild("CageFishingUI"):Destroy()
 end
@@ -27,9 +24,9 @@ local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "CageFishingUI"
 ScreenGui.Parent = game:GetService("CoreGui")
 
--- Main Window (Sized Up)
+-- Main Window
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 650, 0, 450) -- Made significantly bigger
+MainFrame.Size = UDim2.new(0, 650, 0, 450)
 MainFrame.Position = UDim2.new(0.5, -325, 0.5, -225)
 MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
 MainFrame.BorderSizePixel = 0
@@ -40,7 +37,6 @@ Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 15)
 local Sidebar = Instance.new("Frame")
 Sidebar.Size = UDim2.new(0, 180, 1, 0)
 Sidebar.BackgroundColor3 = Color3.fromRGB(14, 14, 14)
-Sidebar.BorderSizePixel = 0
 Sidebar.Parent = MainFrame
 Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 15)
 
@@ -53,7 +49,7 @@ Title.TextSize = 22
 Title.BackgroundTransparency = 1
 Title.Parent = Sidebar
 
--- Tab Container
+-- Tab System
 local TabHolder = Instance.new("Frame")
 TabHolder.Position = UDim2.new(0, 200, 0, 20)
 TabHolder.Size = UDim2.new(1, -220, 1, -40)
@@ -65,20 +61,17 @@ local function CreateTab()
     frame.Size = UDim2.new(1, 0, 1, 0)
     frame.BackgroundTransparency = 1
     frame.Visible = false
-    frame.ScrollBarThickness = 3
-    frame.ScrollBarImageColor3 = Color3.fromRGB(50, 50, 50)
+    frame.ScrollBarThickness = 0
     frame.Parent = TabHolder
-    local layout = Instance.new("UIListLayout", frame)
-    layout.Padding = UDim.new(0, 12)
+    Instance.new("UIListLayout", frame).Padding = UDim.new(0, 12)
     return frame
 end
 
-local AutofarmTab = CreateTab()
+local FishingTab = CreateTab()
+local BaitTab = CreateTab()
 local MiscTab = CreateTab()
-AutofarmTab.Visible = true
+FishingTab.Visible = true
 
--- Sidebar Navigation Logic
-local lastBtn = nil
 local function AddTabBtn(name, targetFrame)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, -30, 0, 45)
@@ -87,53 +80,36 @@ local function AddTabBtn(name, targetFrame)
     btn.Text = name
     btn.TextColor3 = Color3.fromRGB(180, 180, 180)
     btn.Font = Enum.Font.GothamMedium
-    btn.TextSize = 14
     btn.Parent = Sidebar
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
     
     btn.MouseButton1Click:Connect(function()
         for _, v in pairs(TabHolder:GetChildren()) do v.Visible = false end
         targetFrame.Visible = true
-        if lastBtn then TweenService:Create(lastBtn, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(24, 24, 24)}):Play() end
-        TweenService:Create(btn, TweenInfo.new(0.3), {BackgroundColor3 = Color3.fromRGB(40, 40, 40)}):Play()
-        lastBtn = btn
     end)
 end
 
-AddTabBtn("Autofarm", AutofarmTab)
+AddTabBtn("Fishing", FishingTab)
+AddTabBtn("Bait", BaitTab)
 AddTabBtn("Miscellaneous", MiscTab)
 
--- PRO STYLE TOGGLE COMPONENT
-local function AddToggle(name, parent, configKey, desc)
+-- UI Components
+local function AddToggle(name, parent, configKey)
     local container = Instance.new("Frame")
-    container.Size = UDim2.new(1, -10, 0, 60)
+    container.Size = UDim2.new(1, -10, 0, 55)
     container.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
     container.Parent = parent
     Instance.new("UICorner", container).CornerRadius = UDim.new(0, 10)
 
     local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(0.7, 0, 0, 30)
-    label.Position = UDim2.new(0, 20, 0, 8)
+    label.Size = UDim2.new(0.7, 0, 1, 0)
+    label.Position = UDim2.new(0, 20, 0, 0)
     label.Text = name
     label.TextColor3 = Color3.fromRGB(255, 255, 255)
     label.Font = Enum.Font.GothamMedium
-    label.TextSize = 15
     label.TextXAlignment = Enum.TextXAlignment.Left
     label.BackgroundTransparency = 1
     label.Parent = container
-
-    if desc then
-        local dLabel = Instance.new("TextLabel")
-        dLabel.Size = UDim2.new(0.7, 0, 0, 20)
-        dLabel.Position = UDim2.new(0, 20, 0, 30)
-        dLabel.Text = desc
-        dLabel.TextColor3 = Color3.fromRGB(120, 120, 120)
-        dLabel.Font = Enum.Font.Gotham
-        dLabel.TextSize = 12
-        dLabel.TextXAlignment = Enum.TextXAlignment.Left
-        dLabel.BackgroundTransparency = 1
-        dLabel.Parent = container
-    end
 
     local toggleBtn = Instance.new("TextButton")
     toggleBtn.Size = UDim2.new(0, 46, 0, 24)
@@ -152,64 +128,75 @@ local function AddToggle(name, parent, configKey, desc)
 
     toggleBtn.MouseButton1Click:Connect(function()
         _G.Toggles[configKey] = not _G.Toggles[configKey]
-        local targetPos = _G.Toggles[configKey] and UDim2.new(1, -22, 0.5, -10) or UDim2.new(0, 2, 0.5, -10)
-        local targetCol = _G.Toggles[configKey] and Color3.fromRGB(0, 150, 255) or Color3.fromRGB(45, 45, 45)
-        TweenService:Create(circle, TweenInfo.new(0.2), {Position = targetPos}):Play()
-        TweenService:Create(toggleBtn, TweenInfo.new(0.2), {BackgroundColor3 = targetCol}):Play()
+        circle:TweenPosition(_G.Toggles[configKey] and UDim2.new(1, -22, 0.5, -10) or UDim2.new(0, 2, 0.5, -10), "Out", "Quart", 0.2)
+        toggleBtn.BackgroundColor3 = _G.Toggles[configKey] and Color3.fromRGB(0, 150, 255) or Color3.fromRGB(45, 45, 45)
     end)
 end
 
--- BUTTON COMPONENT (For Misc Tab)
-local function AddActionButton(name, parent, callback)
+-- SIMPLE DROPDOWN SYSTEM
+local function AddDropdown(name, parent, options, callback)
+    local container = Instance.new("Frame")
+    container.Size = UDim2.new(1, -10, 0, 50)
+    container.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    container.Parent = parent
+    Instance.new("UICorner", container).CornerRadius = UDim.new(0, 10)
+
     local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, -10, 0, 50)
-    btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-    btn.Text = name
+    btn.Size = UDim2.new(1, 0, 1, 0)
+    btn.BackgroundTransparency = 1
+    btn.Text = name .. ": Select"
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.Font = Enum.Font.GothamMedium
-    btn.TextSize = 14
-    btn.Parent = parent
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
-    btn.MouseButton1Click:Connect(callback)
+    btn.Parent = container
+
+    btn.MouseButton1Click:Connect(function()
+        -- Cycle through options for simplicity
+        local currentIdx = table.find(options, _G.SelectedBait) or 0
+        local nextIdx = (currentIdx % #options) + 1
+        _G.SelectedBait = options[nextIdx]
+        btn.Text = name .. ": " .. _G.SelectedBait
+        if callback then callback(_G.SelectedBait) end
+    end)
 end
 
--- POPULATE AUTOFARM
-AddToggle("Auto Collect", AutofarmTab, "AutoCollect", "Automatically claims cage rewards")
-AddToggle("Auto Sell", AutofarmTab, "AutoSell", "Sells unlocked items from inventory")
-AddToggle("Keep Event Fish", AutofarmTab, "KeepEventFish", "Stops selling items marked as Event")
-AddToggle("Auto Fishing Rod", AutofarmTab, "AutoRod", "Auto-casts your fishing rod")
-AddToggle("Auto Sell Rod Fish", AutofarmTab, "AutoRodSell", "Sells fish caught by rod")
-AddToggle("Cage Sniper", AutofarmTab, "AutoBuyCage", "Buys specific cages from the conveyor")
+-- POPULATE TABS
+AddToggle("Auto Fishing Rod", FishingTab, "AutoRod")
+AddToggle("Auto Sell Rod Fish", FishingTab, "AutoRodSell")
+AddToggle("Cage Sniper", FishingTab, "AutoBuyCage")
 
--- POPULATE MISCELLANEOUS
-AddActionButton("Set Bait Location", MiscTab, function()
-    if LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
-        _G.CustomBaitPos = LP.Character.HumanoidRootPart.Position
-        print("Bait Position Set!")
+-- Multi-Select Placeholder for Cages (Hardcoded example based on your screen)
+AddDropdown("Target Cage", FishingTab, {"Wooden Cage", "Rusty Cage", "Iron Cage"}, function(val)
+    _G.TargetCages = {val}
+end)
+
+AddToggle("Auto Buy Bait", BaitTab, "AutoBuyBait")
+AddDropdown("Select Bait", BaitTab, {"Jar O' Worms", "Jar O' Grubs", "Jar O' Voidflies"}, function(val)
+    _G.SelectedBait = val
+end)
+
+AddToggle("Set Bait Loc", MiscTab, "Unused") -- Simplified for set loc
+
+-- FUNCTIONALITY LOOPS
+task.spawn(function()
+    while true do task.wait(1)
+        if _G.Toggles.AutoBuyCage then
+            pcall(function()
+                for _, cage in pairs(workspace.Conveyor.Models:GetChildren()) do
+                    local name = cage.Information.CageTag.Cage.Text
+                    if table.find(_G.TargetCages, name) then
+                        game:GetService("ReplicatedStorage").Remotes.Server.Conveyor:InvokeServer("Buy", {cage.Name})
+                    end
+                end
+            end)
+        end
+        if _G.Toggles.AutoRod then pcall(function() game:GetService("ReplicatedStorage").Remotes.Server.FishFishingRod:InvokeServer() end) end
     end
 end)
 
-AddActionButton("Teleport to Exhibition", MiscTab, function()
-    if LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
-        LP.Character.HumanoidRootPart.CFrame = CFrame.new(-1097, 13, 450)
-    end
-end)
-
-AddToggle("Auto Buy Bait", MiscTab, "AutoBuyBait", "Buys selected bait automatically")
-
--- [Funtionality for Loot Checking]
--- Checking 'Locked' text and visibility from your provided Explorer images
-local function IsItemLocked(icon)
-    local lockedLabel = icon:FindFirstChild("Locked")
-    return lockedLabel and lockedLabel.Visible == true
-end
-
--- DRAGGING & CLOSE LOGIC
+-- Dragging Logic
 local dragging, dragInput, dragStart, startPos
 MainFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true; dragStart = input.Position; startPos = MainFrame.Position
-    end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true; dragStart = input.Position; startPos = MainFrame.Position end
 end)
 UserInputService.InputChanged:Connect(function(input)
     if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
@@ -218,10 +205,3 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 MainFrame.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end)
-
--- Keybind to hide (RightControl)
-UserInputService.InputBegan:Connect(function(input, gpe)
-    if not gpe and input.KeyCode == Enum.KeyCode.RightControl then
-        MainFrame.Visible = not MainFrame.Visible
-    end
-end)
